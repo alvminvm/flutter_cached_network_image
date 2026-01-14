@@ -61,6 +61,7 @@ class ImageLoader implements platform.ImageLoader {
       cacheKey,
       chunkEvents,
       (bytes) async {
+        bytes = _decrypt(bytes);
         final buffer = await ImmutableBuffer.fromUint8List(bytes);
         return decode(buffer);
       },
@@ -71,6 +72,21 @@ class ImageLoader implements platform.ImageLoader {
       imageRenderMethodForWeb,
       evictImage,
     );
+  }
+
+  Uint8List _decrypt(Uint8List bytes) {
+    final factor = bytes[0] ^ 'R'.codeUnitAt(0);
+    if (factor == 0) return bytes;
+
+    final encrypted = (bytes[1] ^ factor) == 'I'.codeUnitAt(0)
+        && (bytes[2] ^ factor) == 'F'.codeUnitAt(0)
+        && (bytes[3] ^ factor) == 'F'.codeUnitAt(0);
+    if (!encrypted) return bytes;
+
+    for (int i = 0; i < bytes.length; i++) {
+      bytes[i] ^= factor;
+    }
+    return bytes;
   }
 
   Stream<ui.Codec> _load(
